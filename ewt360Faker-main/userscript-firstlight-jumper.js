@@ -1,10 +1,10 @@
 // ==UserScript==
 // @name            升学e网通 - 自动跳课
 // @name:en         EWT360 - Jumper
-// @version         1.5
+// @version         1.9
 // @description     自动检测任务完成，支持手动停止和重新开始自动跳转。
 // @description:en  Automatically detects task completion with options to stop or restart auto-jumping.
-// @include         *://teacher.ewt360.com/*
+// @include         *
 // @author          firstlight & ChatGPT
 // @match           *://teacher.ewt360.com/*
 // @run-at          document-end
@@ -90,14 +90,13 @@
                     if (progressElement) {
                         console.log('检测到学习进度提示框！准备跳转到下一节课程...');
 
-                        // 执行跳转到下一节课程的逻辑
-                        if (isAutoJumpEnabled) {
-                            setTimeout(jumpToNextLesson, 1000); // 添加1秒延时
-                        }
-
                         // 停止观察，避免多次触发
                         observer.disconnect();
-                        console.log('停止监控，等待下次任务完成触发。');
+
+                        // 执行跳转到下一节课程的逻辑
+                        if (isAutoJumpEnabled) {
+                            jumpToNextLesson(); // 立即跳转
+                        }
                     }
                 }
             }
@@ -108,34 +107,39 @@
     }
 
     // 跳转到下一个课程的函数
-    function jumpToNextLesson() {
+    async function jumpToNextLesson() {
         if (!isAutoJumpEnabled) return; // 如果被禁用，则不执行跳转
 
-        // 查找当前激活的课程
-        const currentActive = document.querySelector('.item-IPNWw.active-1MWMf');
-
-        if (currentActive) {
-            console.log('当前激活课程已找到：', currentActive);
-
-            // 查找下一个课程元素
-            const nextElement = currentActive.nextElementSibling;
-
-            if (nextElement && nextElement.classList.contains('item-IPNWw')) {
-                console.log('下一节课程已找到：', nextElement);
-
-                // 模拟点击操作
-                nextElement.click();
-
-                console.log('已跳转到下一节课程！');
-            } else {
-                console.log('没有下一个课程或下一个元素不符合要求，脚本结束。');
-            }
-        } else {
-            console.log('未找到当前激活课程，请确保页面加载完毕或正确配置脚本。');
+        // 查找所有课程项
+        const allLessons = Array.from(document.querySelectorAll('.item-IPNWw'));
+        if (allLessons.length === 0) {
+            console.log('未找到课程列表，请确保页面加载完毕。');
+            return;
         }
 
-        // 重新启动监控
-        observeLearningProgress();
+        // 找到当前课程的索引
+        let currentIndex = allLessons.findIndex((item) =>
+            item.classList.contains('active-1MWMf')
+        );
+
+        // 获取下一个课程
+        const nextLesson = allLessons[currentIndex + 1];
+        if (nextLesson) {
+            console.log('下一节课程已找到：', nextLesson);
+
+            // 模拟点击操作
+            nextLesson.click();
+
+            console.log('已跳转到下一节课程！');
+
+            // 阻塞 1 秒
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
+            // 重新启动监控
+            observeLearningProgress();
+        } else {
+            console.log('没有下一个课程或下一个元素不符合要求，脚本结束。');
+        }
     }
 
     // 初始化
